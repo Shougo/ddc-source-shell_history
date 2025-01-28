@@ -29,7 +29,7 @@ export class Source extends BaseSource<Params> {
     for (const path of args.sourceParams.paths) {
       const expandedPath = await fn.expand(args.denops, path) as string;
       histories = histories.concat(
-        await getHistory(expandedPath, args.sourceParams.limit),
+        (await getHistory(expandedPath, args.sourceParams.limit)).reverse(),
       );
     }
 
@@ -50,7 +50,9 @@ export class Source extends BaseSource<Params> {
 
     const inputLength = input.length - args.completeStr.length;
     const filterInput = input.substring(0, inputLength);
-    return histories.reverse().filter((word) => word.startsWith(filterInput))
+    return histories.filter((word) =>
+      word.startsWith(filterInput) && word !== "history"
+    )
       .map((word) => ({ word: word.substring(inputLength) }));
   }
 
