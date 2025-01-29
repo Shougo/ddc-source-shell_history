@@ -63,6 +63,11 @@ export class Source extends BaseSource<Params> {
 }
 
 async function getHistory(path: string, limit: number): Promise<string[]> {
+  const stat = await safeStat(path);
+  if (!stat) {
+    return [];
+  }
+
   const decoder = new TextDecoder("utf-8");
   const data = await Deno.readFile(path);
   const lines = decoder.decode(data).split("\n");
@@ -75,3 +80,23 @@ async function getHistory(path: string, limit: number): Promise<string[]> {
 
   return commands.slice(-limit);
 }
+
+const safeStat = async (path: string): Promise<Deno.FileInfo | null> => {
+  // NOTE: Deno.stat() may be failed
+  try {
+    const stat = await Deno.lstat(path);
+    if (stat.isSymlink) {
+      try {
+        const stat = await Deno.stat(path);
+        stat.isSymlink = true;
+        return stat;
+      } catch (_: unknown) {
+        // Ignore stat exception
+      }
+    }
+    return stat;
+  } catch (_: unknown) {
+    // Ignore stat exception
+  }
+  return null;
+};
