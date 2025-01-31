@@ -72,13 +72,24 @@ async function getHistory(path: string, limit: number): Promise<string[]> {
   const data = await Deno.readFile(path);
   const lines = decoder.decode(data).split("\n");
 
-  // Get zsh command lines
   const commands = lines.map((line) => {
     const match = line.match(/^: \d+:\d+;(.*)/);
     return match ? match[1] : line;
   }).filter((cmd) => cmd !== "");
 
-  return commands.slice(-limit);
+  function uniq(arr: string[]): string[] {
+    const seen = new Set<string>();
+    return arr.filter((item) => {
+      if (seen.has(item)) {
+        return false;
+      } else {
+        seen.add(item);
+        return true;
+      }
+    });
+  }
+
+  return uniq(commands).slice(-limit);
 }
 
 const safeStat = async (path: string): Promise<Deno.FileInfo | null> => {
