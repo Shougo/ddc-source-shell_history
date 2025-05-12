@@ -90,11 +90,11 @@ async function getHistory(path: string, limit: number): Promise<string[]> {
         result.push(arr[i]);
       }
     }
-    return result.reverse(); // Reverse again to restore the original order
+    return result;
   }
 
   const uniqCommands = uniqFromEnd(commands);
-  return uniqCommands.reverse().slice(Math.max(0, uniqCommands.length - limit));
+  return uniqCommands.slice(Math.max(0, uniqCommands.length - limit));
 }
 
 const safeStat = async (path: string): Promise<Deno.FileInfo | null> => {
