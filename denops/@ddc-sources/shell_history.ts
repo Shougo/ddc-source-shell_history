@@ -3,13 +3,13 @@ import {
   DdcOptions,
   Item,
   SourceOptions,
-} from "jsr:@shougo/ddc-vim@~9.1.0/types";
-import { BaseSource } from "jsr:@shougo/ddc-vim@~9.1.0/source";
+} from "jsr:@shougo/ddc-vim@~9.4.0/types";
+import { BaseSource } from "jsr:@shougo/ddc-vim@~9.4.0/source";
 
 import type { Denops } from "jsr:@denops/core@~7.0.0";
-import * as fn from "jsr:@denops/std@~7.4.0/function";
-import * as op from "jsr:@denops/std@~7.4.0/option";
-import * as vars from "jsr:@denops/std@~7.4.0/variable";
+import * as fn from "jsr:@denops/std@~7.5.0/function";
+import * as op from "jsr:@denops/std@~7.5.0/option";
+import * as vars from "jsr:@denops/std@~7.5.0/variable";
 
 type Params = {
   limit: number;
@@ -29,7 +29,7 @@ export class Source extends BaseSource<Params> {
     for (const path of args.sourceParams.paths) {
       const expandedPath = await fn.expand(args.denops, path) as string;
       histories = histories.concat(
-        (await getHistory(expandedPath, args.sourceParams.limit)).reverse(),
+        await getHistory(expandedPath, args.sourceParams.limit),
       );
     }
 
@@ -72,24 +72,29 @@ async function getHistory(path: string, limit: number): Promise<string[]> {
   const data = await Deno.readFile(path);
   const lines = decoder.decode(data).split("\n");
 
-  const commands = lines.map((line) => {
-    const match = line.match(/^: \d+:\d+;(.*)/);
-    return match ? match[1] : line;
-  }).filter((cmd) => cmd !== "");
+  // Extract commands from lines
+  const commands = lines
+    .map((line) => {
+      const match = line.match(/^: \d+:\d+;(.*)/);
+      return match ? match[1] : line;
+    })
+    .filter((cmd) => cmd !== "");
 
-  function uniq(arr: string[]): string[] {
+  // Remove duplicates from the end
+  function uniqFromEnd(arr: string[]): string[] {
     const seen = new Set<string>();
-    return arr.filter((item) => {
-      if (seen.has(item)) {
-        return false;
-      } else {
-        seen.add(item);
-        return true;
+    const result: string[] = [];
+    for (let i = arr.length - 1; i >= 0; i--) {
+      if (!seen.has(arr[i])) {
+        seen.add(arr[i]);
+        result.push(arr[i]);
       }
-    });
+    }
+    return result.reverse(); // Reverse again to restore the original order
   }
 
-  return uniq(commands).slice(-limit);
+  const uniqCommands = uniqFromEnd(commands);
+  return uniqCommands.reverse().slice(Math.max(0, uniqCommands.length - limit));
 }
 
 const safeStat = async (path: string): Promise<Deno.FileInfo | null> => {
